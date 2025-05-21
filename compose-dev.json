@@ -1,0 +1,58 @@
+{
+  "description": "Compose Support for Notebooks",
+  "properties": [
+    { "name": "compose", "value": "1.7.3" },
+    { "name": "platform", "value": "macos-arm64" },
+    { "name": "coroutines", "value": "1.8.0" },
+    { "name": "skiko", "value": "0.8.18" },
+    { "name": "androidx-collection", "value": "1.4.5" },
+    { "name": "lifecycle-common", "value": "2.8.7" },
+    { "name": "lifecycle", "value": "2.8.4" },
+    { "name": "v-renovate-hint", "value": "update: package=org.jetbrains.kotlinx:dataframe" }
+  ],
+  "link": "https://github.com/Kotlin/kotlin-jupyter",
+  "init": [
+    "@file:OptIn(ExperimentalTestApi::class)\nimport java.awt.BorderLayout\nimport java.awt.event.MouseWheelEvent\nimport javax.swing.JPanel\nimport java.awt.LayoutManager\n\nclass NonPropagatingPanel(layout: LayoutManager) : JPanel(layout) {\n  override fun processMouseWheelEvent(e: MouseWheelEvent) {\n    if (shouldConsumeScroll(e)) {\n      e.consume()\n    } else {\n      super.processMouseWheelEvent(e)\n    }\n  }\n  private fun shouldConsumeScroll(e: MouseWheelEvent): Boolean {\n    return true // Prevent scroll events from leaking outside the Compose Panel\n  }\n}\n\n\nfun composeScreenshot(\n    width: Int = 1024,\n    height: Int = 768,\n    backgroundColor: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.White,\n    content: @Composable () -> Unit,\n): BufferedImage {\n    lateinit var image: BufferedImage\n    runDesktopComposeUiTest(width, height) {\n        setContent(composeContent(backgroundColor, content))\n        val screenshot: Bitmap = this.captureToImage().asSkiaBitmap()\n        image = screenshot.toBufferedImage()\n    }\n    return image\n}\n\nprivate fun composeContent(\n    backgroundColor: androidx.compose.ui.graphics.Color,\n    content: @Composable () -> Unit\n): @Composable () -> Unit {\n    val wrappedContent: @Composable () -> Unit = {\n        Box(\n            modifier = Modifier.fillMaxSize().background(backgroundColor),\n            contentAlignment = Alignment.Center\n        ) {\n            content()\n        }\n    }\n    return wrappedContent\n}\n\nfun COMPOSE(\n    width: Int = 1024,\n    height: Int = 300,\n    backgroundColor: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Transparent,\n    content: @Composable () -> Unit\n): Any {\n    if (notebook.kernelRunMode.inMemoryOutputsSupported) {\n        val screenWidth = width // Will auto-expand, but must be > 0\n        val screenHeight = height // Default starting height. If Compose view is higher it will auto-expand.\n        val mainPanel = NonPropagatingPanel(BorderLayout())\n        mainPanel.isOpaque = true\n        mainPanel.preferredSize = Dimension(screenWidth, screenHeight)\n        mainPanel.size = Dimension(screenWidth, screenHeight)\n        mainPanel.isVisible = true\n        var composePanel: JComponent? = null\n        SwingUtilities.invokeAndWait {\n            val panel = ComposePanel()\n            panel.isOpaque = false\n            panel.setContent(composeContent(backgroundColor, content))\n            composePanel = panel\n        }\n        mainPanel.add(composePanel!!, BorderLayout.CENTER)\n        return mainPanel\n    } else {\n        val image = composeScreenshot(\n            width,\n            height,\n            backgroundColor,\n            content,\n        )\n        return image\n    }\n}"
+  ],
+  "repositories": [
+    "https://maven.google.com"
+  ],
+  "dependencies": [
+    "org.jetbrains.compose:compose-full:$compose",
+    "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:$coroutines",
+    "org.jetbrains.skiko:skiko-awt-runtime-$platform:$skiko",
+    "org.jetbrains.skiko:skiko-awt:$skiko",
+    "androidx.collection:collection-jvm:$androidx-collection",
+    "androidx.lifecycle:lifecycle-common:$lifecycle-common",
+    "androidx.lifecycle:lifecycle-viewmodel-compose-desktop:$lifecycle",
+    "androidx.lifecycle:lifecycle-runtime-compose-desktop:$lifecycle",
+    "org.jetbrains.compose.ui:ui-test-junit4-desktop:$compose",
+    "org.jetbrains.compose.ui:ui-graphics-desktop:$compose",
+    "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutines"
+  ],
+  "imports": [
+    "androidx.compose.ui.test.ExperimentalTestApi",
+    "androidx.compose.ui.test.runDesktopComposeUiTest",
+    "androidx.compose.ui.graphics.*",
+    "androidx.compose.ui.*",
+    "androidx.compose.ui.draw.*",
+    "androidx.compose.ui.text.style.*",
+    "androidx.compose.foundation.*",
+    "androidx.compose.foundation.layout.*",
+    "androidx.compose.foundation.shape.*",
+    "androidx.compose.material.*",
+    "androidx.compose.runtime.*",
+    "androidx.compose.ui.unit.*",
+    "androidx.compose.ui.window.*",
+    "androidx.compose.foundation.shape.*",
+    "androidx.compose.ui.awt.ComposePanel",
+    "org.jetbrains.skia.Bitmap",
+    "org.jetbrains.skiko.toBufferedImage",
+    "java.awt.BorderLayout",
+    "java.awt.Dimension",
+    "java.awt.image.BufferedImage",
+    "javax.swing.JComponent",
+    "javax.swing.JPanel",
+    "javax.swing.SwingUtilities"
+  ]
+}
